@@ -43,9 +43,6 @@ namespace LobbyRelaySample
         private RelayUtpSetup m_relaySetup;
         private RelayUtpClient m_relayClient;
 
-        private vivox.VivoxSetup m_vivoxSetup = new vivox.VivoxSetup();
-        [SerializeField]
-        private List<vivox.VivoxUserHandler> m_vivoxUserHandlers;
 
         /// <summary>Rather than a setter, this is usable in-editor. It won't accept an enum, however.</summary>
         public void SetLobbyColorFilter(int color)
@@ -83,7 +80,6 @@ namespace LobbyRelaySample
             m_localUser.ID = Locator.Get.Identity.GetSubIdentity(Auth.IIdentityType.Auth).GetContent("id");
             m_localUser.DisplayName = NameGenerator.GetName(m_localUser.ID);
             m_localLobby.AddPlayer(m_localUser); // The local LobbyUser object will be hooked into UI before the LocalLobby is populated during lobby join, so the LocalLobby must know about it already when that happens.
-            StartVivoxLogin();
         }
 
         private void BeginObservers()
@@ -230,7 +226,6 @@ namespace LobbyRelaySample
             if (m_localUser.IsHost)
             {
                 StartRelayConnection();
-                StartVivoxJoin();
             }
             else
             {
@@ -244,7 +239,6 @@ namespace LobbyRelaySample
             LobbyAsyncRequests.Instance.LeaveLobbyAsync(m_localLobby.LobbyID, ResetLocalLobby);
             m_lobbyContentHeartbeat.EndTracking();
             LobbyAsyncRequests.Instance.EndTracking();
-            m_vivoxSetup.LeaveLobbyChannel();
 
             if (m_relaySetup != null)
             {   Component.Destroy(m_relaySetup);
@@ -271,32 +265,6 @@ namespace LobbyRelaySample
         private void OnFailedJoin()
         {
             SetGameState(GameState.JoinMenu);
-        }
-
-        private void StartVivoxLogin()
-        {
-            m_vivoxSetup.Initialize(m_vivoxUserHandlers, OnVivoxLoginComplete);
-
-            void OnVivoxLoginComplete(bool didSucceed)
-            {
-                if (!didSucceed)
-                {   Debug.LogError("Vivox login failed! Retrying in 5s...");
-                    StartCoroutine(RetryConnection(StartVivoxLogin, m_localLobby.LobbyID));
-                }
-            }
-        }
-
-        private void StartVivoxJoin()
-        {
-            m_vivoxSetup.JoinLobbyChannel(m_localLobby.LobbyID, OnVivoxJoinComplete);
-
-            void OnVivoxJoinComplete(bool didSucceed)
-            {
-                if (!didSucceed)
-                {   Debug.LogError("Vivox connection failed! Retrying in 5s...");
-                    StartCoroutine(RetryConnection(StartVivoxJoin, m_localLobby.LobbyID));
-                }
-            }
         }
 
         private void StartRelayConnection()
@@ -338,7 +306,6 @@ namespace LobbyRelaySample
             if (!m_localUser.IsHost && m_localUser.IsApproved)
             {
                 CompleteRelayConnection();
-                StartVivoxJoin();
             }
         }
 
